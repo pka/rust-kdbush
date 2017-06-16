@@ -19,7 +19,11 @@ impl KDBush {
     pub fn fill<'a, I>(points: I, size: usize, node_size: u8) -> KDBush
         where I: Iterator<Item = &'a Point>
     {
-        let mut kdbush = KDBush { ids: Vec::with_capacity(size), points: Vec::with_capacity(size), node_size: node_size };
+        let mut kdbush = KDBush {
+            ids: Vec::with_capacity(size),
+            points: Vec::with_capacity(size),
+            node_size: node_size,
+        };
         for (i, point) in points.enumerate() {
             kdbush.points.push([point[0], point[1]]);
             kdbush.ids.push(i);
@@ -29,10 +33,22 @@ impl KDBush {
     }
 
     /// Finds all items within the given bounding box.
-    pub fn range<F>(&self, minx: TNumber, miny: TNumber, maxx: TNumber, maxy: TNumber, mut visitor: F)
+    pub fn range<F>(&self,
+                    minx: TNumber,
+                    miny: TNumber,
+                    maxx: TNumber,
+                    maxy: TNumber,
+                    mut visitor: F)
         where F: FnMut(TIndex)
     {
-        self.range_idx(minx, miny, maxx, maxy, &mut visitor, 0, self.ids.len() - 1, 0);
+        self.range_idx(minx,
+                       miny,
+                       maxx,
+                       maxy,
+                       &mut visitor,
+                       0,
+                       self.ids.len() - 1,
+                       0);
     }
 
     /// Finds all items within a given radius from the query point.
@@ -42,15 +58,24 @@ impl KDBush {
         self.within_idx(qx, qy, r, &mut visitor, 0, self.ids.len() - 1, 0);
     }
 
-    fn range_idx<F>(&self, minx: TNumber, miny: TNumber, maxx: TNumber, maxy: TNumber, visitor: &mut F,
-                  left: TIndex, right: TIndex, axis: usize)
+    fn range_idx<F>(&self,
+                    minx: TNumber,
+                    miny: TNumber,
+                    maxx: TNumber,
+                    maxy: TNumber,
+                    visitor: &mut F,
+                    left: TIndex,
+                    right: TIndex,
+                    axis: usize)
         where F: FnMut(TIndex)
     {
         if right - left <= self.node_size as usize {
-            for i in left..right+1 {
+            for i in left..right + 1 {
                 let x = self.points[i][0];
                 let y = self.points[i][1];
-                if x >= minx && x <= maxx && y >= miny && y <= maxy { visitor(self.ids[i]); }
+                if x >= minx && x <= maxx && y >= miny && y <= maxy {
+                    visitor(self.ids[i]);
+                }
             }
             return;
         }
@@ -59,7 +84,9 @@ impl KDBush {
         let x = self.points[m][0];
         let y = self.points[m][1];
 
-        if x >= minx && x <= maxx && y >= miny && y <= maxy { visitor(self.ids[m]); }
+        if x >= minx && x <= maxx && y >= miny && y <= maxy {
+            visitor(self.ids[m]);
+        }
 
         let lte = if axis == 0 { minx <= x } else { miny <= y };
         if lte {
@@ -68,21 +95,36 @@ impl KDBush {
 
         let gte = if axis == 0 { maxx >= x } else { maxy >= y };
         if gte {
-            self.range_idx(minx, miny, maxx, maxy, visitor, m + 1, right, (axis + 1) % 2);
+            self.range_idx(minx,
+                           miny,
+                           maxx,
+                           maxy,
+                           visitor,
+                           m + 1,
+                           right,
+                           (axis + 1) % 2);
         }
     }
 
-    pub fn within_idx<F>(&self, qx: TNumber, qy: TNumber, r: TNumber, visitor: &mut F,
-                  left: TIndex, right: TIndex, axis: usize)
+    pub fn within_idx<F>(&self,
+                         qx: TNumber,
+                         qy: TNumber,
+                         r: TNumber,
+                         visitor: &mut F,
+                         left: TIndex,
+                         right: TIndex,
+                         axis: usize)
         where F: FnMut(TIndex)
     {
         let r2 = r * r;
 
         if right - left <= self.node_size as usize {
-            for i in left..right+1 {
+            for i in left..right + 1 {
                 let x = self.points[i][0];
                 let y = self.points[i][1];
-                if KDBush::sq_dist(x, y, qx, qy) <= r2 { visitor(self.ids[i]); }
+                if KDBush::sq_dist(x, y, qx, qy) <= r2 {
+                    visitor(self.ids[i]);
+                }
             }
             return;
         }
@@ -91,7 +133,9 @@ impl KDBush {
         let x = self.points[m][0];
         let y = self.points[m][1];
 
-        if KDBush::sq_dist(x, y, qx, qy) <= r2 { visitor(self.ids[m]); }
+        if KDBush::sq_dist(x, y, qx, qy) <= r2 {
+            visitor(self.ids[m]);
+        }
 
         let lte = if axis == 0 { qx - r <= x } else { qy - r <= y };
         if lte {
@@ -105,7 +149,9 @@ impl KDBush {
     }
 
     fn sort_kd(&mut self, left: TIndex, right: TIndex, axis: u8) {
-        if right - left <= self.node_size as usize { return }
+        if right - left <= self.node_size as usize {
+            return;
+        }
         let m: TIndex = (left + right) >> 1;
         if axis == 0 {
             self.select(m, left, right, 0);
@@ -123,8 +169,13 @@ impl KDBush {
                 let m = (k - left + 1) as f64;
                 let z = f64::ln(n);
                 let s = 0.5 * f64::exp(2.0 * z / 3.0);
-                let r = k as f64 - m * s / n + 0.5 * f64::sqrt(z * s * (1.0 - s / n)) * (if 2.0 * m < n { -1.0 } else { 1.0 });
-                self.select(k, cmp::max(left, r as usize), cmp::min(right, (r + s) as usize), axis);
+                let r = k as f64 - m * s / n +
+                        0.5 * f64::sqrt(z * s * (1.0 - s / n)) *
+                        (if 2.0 * m < n { -1.0 } else { 1.0 });
+                self.select(k,
+                            cmp::max(left, r as usize),
+                            cmp::min(right, (r + s) as usize),
+                            axis);
             }
 
             let t = self.points[k][axis];
@@ -132,14 +183,20 @@ impl KDBush {
             let mut j = right;
 
             self.swap_item(left, k);
-            if self.points[right][axis] > t {self.swap_item(left, right);}
+            if self.points[right][axis] > t {
+                self.swap_item(left, right);
+            }
 
             while i < j {
                 self.swap_item(i, j);
                 i += 1;
                 j -= 1;
-                while self.points[i][axis] < t { i += 1; }
-                while self.points[j][axis] > t { j -= 1; }
+                while self.points[i][axis] < t {
+                    i += 1;
+                }
+                while self.points[j][axis] > t {
+                    j -= 1;
+                }
             }
 
             if self.points[left][axis] == t {
@@ -149,8 +206,12 @@ impl KDBush {
                 self.swap_item(j, right);
             }
 
-            if j <= k { left = j + 1; }
-            if k <= j { right = j - 1; }
+            if j <= k {
+                left = j + 1;
+            }
+            if k <= j {
+                right = j - 1;
+            }
         }
     }
 
@@ -162,11 +223,11 @@ impl KDBush {
     fn sq_dist(ax: TNumber, ay: TNumber, bx: TNumber, by: TNumber) -> TNumber {
         (ax - bx).powi(2) + (ay - by).powi(2)
     }
-
 }
 
 
 #[cfg(test)]
+#[cfg_attr(rustfmt, rustfmt_skip)]
 const POINTS: [Point; 100] = [
     [ 54.0, 1.0 ],  [ 97.0, 21.0 ], [ 65.0, 35.0 ], [ 33.0, 54.0 ], [ 95.0, 39.0 ], [ 54.0, 3.0 ],  [ 53.0, 54.0 ], [ 84.0, 72.0 ],
     [ 33.0, 34.0 ], [ 43.0, 15.0 ], [ 52.0, 83.0 ], [ 81.0, 23.0 ], [ 1.0, 61.0 ],  [ 38.0, 74.0 ], [ 11.0, 91.0 ], [ 24.0, 56.0 ],

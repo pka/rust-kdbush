@@ -1,4 +1,3 @@
 mod kdbush;
 
-pub use kdbush::KDBush;
-pub use kdbush::Points;
+pub use kdbush::{KDBush, PointReader, DEFAULT_NODE_SIZE};

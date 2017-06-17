@@ -1,7 +1,3 @@
-/// A Rust port of [kdbush](https://github.com/mourner/kdbush), a fast static spatial index for 2D points.
-///
-/// [A dive into spatial search algorithms](https://medium.com/@agafonkin/a-dive-into-spatial-search-algorithms-ebd0c5e39d2a)
-
 use std::f64;
 use std::cmp;
 
@@ -9,11 +5,46 @@ type TIndex = usize;
 type TNumber = f64;
 type Point = [TNumber; 2];
 
-pub trait Points {
+pub const DEFAULT_NODE_SIZE: u8 = 64;
+
+/// Input points reader trait
+///
+/// # Example
+///
+/// ```
+/// struct Points { points: Vec<(f64, f64)> };
+/// impl kdbush::PointReader for Points {
+///    fn size_hint(&self) -> usize {
+///        self.points.len()
+///    }
+///    fn visit_all<F>(&self, mut visitor: F)
+///        where F: FnMut(usize, f64, f64)
+///    {
+///        for (i, point) in self.points.iter().enumerate() {
+///            visitor(i, point.0, point.1);
+///        }
+///    }
+/// }
+/// ```
+pub trait PointReader {
     fn size_hint(&self) -> usize;
     fn visit_all<F>(&self, visitor: F) where F: FnMut(usize, f64, f64);
 }
 
+impl PointReader for Vec<(f64, f64)> {
+    fn size_hint(&self) -> usize {
+        self.len()
+    }
+    fn visit_all<F>(&self, mut visitor: F)
+        where F: FnMut(usize, f64, f64)
+    {
+        for (i, point) in self.iter().enumerate() {
+            visitor(i, point.0, point.1);
+        }
+    }
+}
+
+/// A very fast static spatial index for 2D points based on a flat KD-tree
 pub struct KDBush {
     ids: Vec<TIndex>,
     points: Vec<Point>,
@@ -21,7 +52,13 @@ pub struct KDBush {
 }
 
 impl KDBush {
-    pub fn fill<P: Points>(points: P, node_size: u8) -> KDBush {
+    /// Creates an index from the given points
+    ///
+    /// # Arguments
+    ///
+    /// * `points` - Input points reader
+    /// * `node_size` - Size of the KD-tree node, 64 by default. Higher means faster indexing but slower search, and vise versa
+    pub fn create<R: PointReader>(points: R, node_size: u8) -> KDBush {
         let mut kdbush = KDBush {
             ids: Vec::with_capacity(points.size_hint()),
             points: Vec::with_capacity(points.size_hint()),
@@ -36,7 +73,12 @@ impl KDBush {
         kdbush
     }
 
-    /// Finds all items within the given bounding box.
+    /// Finds all items within the given bounding box
+    ///
+    /// # Arguments
+    ///
+    /// * `minx`, `miny`, `maxx`, `maxy` - Bounding box
+    /// * `visitor` - Result reader
     pub fn range<F>(&self,
                     minx: TNumber,
                     miny: TNumber,
@@ -55,7 +97,13 @@ impl KDBush {
                        0);
     }
 
-    /// Finds all items within a given radius from the query point.
+    /// Finds all items within a given radius from the query point
+    ///
+    /// # Arguments
+    ///
+    /// * `qx`, `qy` - Query point
+    /// * `r` - Radius
+    /// * `visitor` - Result reader
     pub fn within<F>(&self, qx: TNumber, qy: TNumber, r: TNumber, mut visitor: F)
         where F: FnMut(TIndex)
     {
@@ -110,14 +158,14 @@ impl KDBush {
         }
     }
 
-    pub fn within_idx<F>(&self,
-                         qx: TNumber,
-                         qy: TNumber,
-                         r: TNumber,
-                         visitor: &mut F,
-                         left: TIndex,
-                         right: TIndex,
-                         axis: usize)
+    fn within_idx<F>(&self,
+                     qx: TNumber,
+                     qy: TNumber,
+                     r: TNumber,
+                     visitor: &mut F,
+                     left: TIndex,
+                     right: TIndex,
+                     axis: usize)
         where F: FnMut(TIndex)
     {
         let r2 = r * r;
@@ -249,7 +297,7 @@ const POINTS: [Point; 100] = [
 ];
 
 #[cfg(test)]
-impl Points for [Point; 100] {
+impl PointReader for [Point; 100] {
     fn size_hint(&self) -> usize {
         self.len()
     }
@@ -265,7 +313,7 @@ impl Points for [Point; 100] {
 
 #[test]
 fn test_range() {
-    let index = KDBush::fill(POINTS, 10);
+    let index = KDBush::create(POINTS, 10);
     let expected_ids = vec![3, 90, 77, 72, 62, 96, 47, 8, 17, 15, 69, 71, 44, 19, 18, 45, 60, 20];
     let mut result = Vec::new();
     index.range(20.0, 30.0, 50.0, 70.0, |idx| result.push(idx));
@@ -274,7 +322,7 @@ fn test_range() {
 
 #[test]
 fn test_radius() {
-    let index = KDBush::fill(POINTS, 10);
+    let index = KDBush::create(POINTS, 10);
     let expected_ids = vec![3, 96, 71, 44, 18, 45, 60, 6, 25, 92, 42, 20];
     let mut result = Vec::new();
     index.within(50.0, 50.0, 20.0, |idx| result.push(idx));
@@ -283,7 +331,8 @@ fn test_radius() {
 
 #[test]
 fn test_readme() {
-    let index = KDBush::fill(POINTS, 10);
+    let points = vec![(54.0, 1.0), (97.0, 21.0), (65.0, 35.0)];
+    let index = KDBush::create(points, DEFAULT_NODE_SIZE);
     index.range(20.0, 30.0, 50.0, 70.0, |id| print!("{} ", id));
     index.within(50.0, 50.0, 20.0, |id| print!("{} ", id));
 }

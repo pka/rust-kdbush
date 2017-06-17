@@ -21,17 +21,16 @@ pub struct KDBush {
 }
 
 impl KDBush {
-    pub fn fill<P: Points>(points: P, node_size: u8) -> KDBush
-    {
+    pub fn fill<P: Points>(points: P, node_size: u8) -> KDBush {
         let mut kdbush = KDBush {
             ids: Vec::with_capacity(points.size_hint()),
             points: Vec::with_capacity(points.size_hint()),
             node_size: node_size,
         };
         points.visit_all(|id, x, y| {
-            kdbush.points.push([x, y]);
-            kdbush.ids.push(id);
-        });
+                             kdbush.points.push([x, y]);
+                             kdbush.ids.push(id);
+                         });
         let size = kdbush.points.len();
         kdbush.sort_kd(0, size - 1, 0);
         kdbush
@@ -251,8 +250,12 @@ const POINTS: [Point; 100] = [
 
 #[cfg(test)]
 impl Points for [Point; 100] {
-    fn size_hint(&self) -> usize { self.len() }
-    fn visit_all<F>(&self, mut visitor: F) where F: FnMut(usize, f64, f64) {
+    fn size_hint(&self) -> usize {
+        self.len()
+    }
+    fn visit_all<F>(&self, mut visitor: F)
+        where F: FnMut(usize, f64, f64)
+    {
         for (i, point) in self.iter().enumerate() {
             visitor(i, point[0], point[1]);
         }
@@ -264,11 +267,8 @@ impl Points for [Point; 100] {
 fn test_range() {
     let index = KDBush::fill(POINTS, 10);
     let expected_ids = vec![3, 90, 77, 72, 62, 96, 47, 8, 17, 15, 69, 71, 44, 19, 18, 45, 60, 20];
-    let mut result = Vec::<TIndex>::new();
-    {
-        let visitor = |idx: TIndex| result.push(idx);
-        index.range(20.0, 30.0, 50.0, 70.0, visitor);
-    }
+    let mut result = Vec::new();
+    index.range(20.0, 30.0, 50.0, 70.0, |idx| result.push(idx));
     assert_eq!(expected_ids, result);
 }
 
@@ -276,10 +276,14 @@ fn test_range() {
 fn test_radius() {
     let index = KDBush::fill(POINTS, 10);
     let expected_ids = vec![3, 96, 71, 44, 18, 45, 60, 6, 25, 92, 42, 20];
-    let mut result = Vec::<TIndex>::new();
-    {
-        let visitor = |idx: TIndex| result.push(idx);
-        index.within(50.0, 50.0, 20.0, visitor);
-    }
+    let mut result = Vec::new();
+    index.within(50.0, 50.0, 20.0, |idx| result.push(idx));
     assert_eq!(expected_ids, result);
+}
+
+#[test]
+fn test_readme() {
+    let index = KDBush::fill(POINTS, 10);
+    index.range(20.0, 30.0, 50.0, 70.0, |id| print!("{} ", id));
+    index.within(50.0, 50.0, 20.0, |id| print!("{} ", id));
 }

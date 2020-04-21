@@ -76,6 +76,32 @@ impl KDBush {
         kdbush
     }
 
+    /// Creates an empty index
+    ///
+    /// # Arguments
+    ///
+    /// * `size_hint` - Number of points to add (maybe 0, if unkown).
+    /// * `node_size` - Size of the KD-tree node.
+    pub fn new(size_hint: usize, node_size: u8) -> KDBush {
+        KDBush {
+            ids: Vec::with_capacity(size_hint),
+            points: Vec::with_capacity(size_hint),
+            node_size: node_size,
+        }
+    }
+
+    /// Add point to index
+    pub fn add_point(&mut self, id: usize, x: f64, y: f64) {
+        self.points.push([x, y]);
+        self.ids.push(id);
+    }
+
+    /// Build index
+    pub fn build_index(&mut self) {
+        let size = self.points.len();
+        self.sort_kd(0, size - 1, 0);
+    }
+
     /// Finds all items within the given bounding box
     ///
     /// # Arguments
@@ -346,6 +372,21 @@ mod tests {
         let expected_ids = vec![3, 96, 71, 44, 18, 45, 60, 6, 25, 92, 42, 20];
         let mut result = Vec::new();
         index.within(50.0, 50.0, 20.0, |idx| result.push(idx));
+        assert_eq!(expected_ids, result);
+    }
+
+    #[test]
+    fn test_push_api() {
+        let mut index = KDBush::new(POINTS.len(), 10);
+        for (i, point) in POINTS.iter().enumerate() {
+            index.add_point(i, point[0], point[1]);
+        }
+        index.build_index();
+        let expected_ids = vec![
+            3, 90, 77, 72, 62, 96, 47, 8, 17, 15, 69, 71, 44, 19, 18, 45, 60, 20,
+        ];
+        let mut result = Vec::new();
+        index.range(20.0, 30.0, 50.0, 70.0, |idx| result.push(idx));
         assert_eq!(expected_ids, result);
     }
 

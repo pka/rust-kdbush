@@ -1,6 +1,6 @@
 [package]
 name = "kdbush"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Pirmin Kalberer <pka@sourcepole.ch>"]
 description = "A very fast static spatial index for 2D points based on a flat KD-tree."
 homepage = "https://github.com/pka/rust-kdbush"

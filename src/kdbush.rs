@@ -1,5 +1,5 @@
-use std::f64;
 use std::cmp;
+use std::f64;
 
 type TIndex = usize;
 type TNumber = f64;
@@ -28,7 +28,9 @@ pub const DEFAULT_NODE_SIZE: u8 = 64;
 /// ```
 pub trait PointReader {
     fn size_hint(&self) -> usize;
-    fn visit_all<F>(&self, visitor: F) where F: FnMut(usize, f64, f64);
+    fn visit_all<F>(&self, visitor: F)
+    where
+        F: FnMut(usize, f64, f64);
 }
 
 impl PointReader for Vec<(f64, f64)> {
@@ -36,7 +38,8 @@ impl PointReader for Vec<(f64, f64)> {
         self.len()
     }
     fn visit_all<F>(&self, mut visitor: F)
-        where F: FnMut(usize, f64, f64)
+    where
+        F: FnMut(usize, f64, f64),
     {
         for (i, point) in self.iter().enumerate() {
             visitor(i, point.0, point.1);
@@ -65,9 +68,9 @@ impl KDBush {
             node_size: node_size,
         };
         points.visit_all(|id, x, y| {
-                             kdbush.points.push([x, y]);
-                             kdbush.ids.push(id);
-                         });
+            kdbush.points.push([x, y]);
+            kdbush.ids.push(id);
+        });
         let size = kdbush.points.len();
         kdbush.sort_kd(0, size - 1, 0);
         kdbush
@@ -79,22 +82,26 @@ impl KDBush {
     ///
     /// * `minx`, `miny`, `maxx`, `maxy` - Bounding box
     /// * `visitor` - Result reader
-    pub fn range<F>(&self,
-                    minx: TNumber,
-                    miny: TNumber,
-                    maxx: TNumber,
-                    maxy: TNumber,
-                    mut visitor: F)
-        where F: FnMut(TIndex)
+    pub fn range<F>(
+        &self,
+        minx: TNumber,
+        miny: TNumber,
+        maxx: TNumber,
+        maxy: TNumber,
+        mut visitor: F,
+    ) where
+        F: FnMut(TIndex),
     {
-        self.range_idx(minx,
-                       miny,
-                       maxx,
-                       maxy,
-                       &mut visitor,
-                       0,
-                       self.ids.len() - 1,
-                       0);
+        self.range_idx(
+            minx,
+            miny,
+            maxx,
+            maxy,
+            &mut visitor,
+            0,
+            self.ids.len() - 1,
+            0,
+        );
     }
 
     /// Finds all items within a given radius from the query point
@@ -105,21 +112,24 @@ impl KDBush {
     /// * `r` - Radius
     /// * `visitor` - Result reader
     pub fn within<F>(&self, qx: TNumber, qy: TNumber, r: TNumber, mut visitor: F)
-        where F: FnMut(TIndex)
+    where
+        F: FnMut(TIndex),
     {
         self.within_idx(qx, qy, r, &mut visitor, 0, self.ids.len() - 1, 0);
     }
 
-    fn range_idx<F>(&self,
-                    minx: TNumber,
-                    miny: TNumber,
-                    maxx: TNumber,
-                    maxy: TNumber,
-                    visitor: &mut F,
-                    left: TIndex,
-                    right: TIndex,
-                    axis: usize)
-        where F: FnMut(TIndex)
+    fn range_idx<F>(
+        &self,
+        minx: TNumber,
+        miny: TNumber,
+        maxx: TNumber,
+        maxy: TNumber,
+        visitor: &mut F,
+        left: TIndex,
+        right: TIndex,
+        axis: usize,
+    ) where
+        F: FnMut(TIndex),
     {
         if right - left <= self.node_size as usize {
             for i in left..right + 1 {
@@ -147,26 +157,30 @@ impl KDBush {
 
         let gte = if axis == 0 { maxx >= x } else { maxy >= y };
         if gte {
-            self.range_idx(minx,
-                           miny,
-                           maxx,
-                           maxy,
-                           visitor,
-                           m + 1,
-                           right,
-                           (axis + 1) % 2);
+            self.range_idx(
+                minx,
+                miny,
+                maxx,
+                maxy,
+                visitor,
+                m + 1,
+                right,
+                (axis + 1) % 2,
+            );
         }
     }
 
-    fn within_idx<F>(&self,
-                     qx: TNumber,
-                     qy: TNumber,
-                     r: TNumber,
-                     visitor: &mut F,
-                     left: TIndex,
-                     right: TIndex,
-                     axis: usize)
-        where F: FnMut(TIndex)
+    fn within_idx<F>(
+        &self,
+        qx: TNumber,
+        qy: TNumber,
+        r: TNumber,
+        visitor: &mut F,
+        left: TIndex,
+        right: TIndex,
+        axis: usize,
+    ) where
+        F: FnMut(TIndex),
     {
         let r2 = r * r;
 
@@ -221,13 +235,16 @@ impl KDBush {
                 let m = (k - left + 1) as f64;
                 let z = f64::ln(n);
                 let s = 0.5 * f64::exp(2.0 * z / 3.0);
-                let r = k as f64 - m * s / n +
-                        0.5 * f64::sqrt(z * s * (1.0 - s / n)) *
-                        (if 2.0 * m < n { -1.0 } else { 1.0 });
-                self.select(k,
-                            cmp::max(left, r as usize),
-                            cmp::min(right, (r + s) as usize),
-                            axis);
+                let r = k as f64 - m * s / n
+                    + 0.5
+                        * f64::sqrt(z * s * (1.0 - s / n))
+                        * (if 2.0 * m < n { -1.0 } else { 1.0 });
+                self.select(
+                    k,
+                    cmp::max(left, r as usize),
+                    cmp::min(right, (r + s) as usize),
+                    axis,
+                );
             }
 
             let t = self.points[k][axis];
@@ -277,7 +294,6 @@ impl KDBush {
     }
 }
 
-
 #[cfg(test)]
 #[cfg_attr(rustfmt, rustfmt_skip)]
 const POINTS: [Point; 100] = [
@@ -302,7 +318,8 @@ impl PointReader for [Point; 100] {
         self.len()
     }
     fn visit_all<F>(&self, mut visitor: F)
-        where F: FnMut(usize, f64, f64)
+    where
+        F: FnMut(usize, f64, f64),
     {
         for (i, point) in self.iter().enumerate() {
             visitor(i, point[0], point[1]);
@@ -310,11 +327,12 @@ impl PointReader for [Point; 100] {
     }
 }
 
-
 #[test]
 fn test_range() {
     let index = KDBush::create(POINTS, 10);
-    let expected_ids = vec![3, 90, 77, 72, 62, 96, 47, 8, 17, 15, 69, 71, 44, 19, 18, 45, 60, 20];
+    let expected_ids = vec![
+        3, 90, 77, 72, 62, 96, 47, 8, 17, 15, 69, 71, 44, 19, 18, 45, 60, 20,
+    ];
     let mut result = Vec::new();
     index.range(20.0, 30.0, 50.0, 70.0, |idx| result.push(idx));
     assert_eq!(expected_ids, result);

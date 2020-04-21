@@ -9,5 +9,6 @@ readme = "README.md"
 documentation = "https://docs.rs/kdbush/"
 keywords = ["kd-tree", "spatial", "geometry"]
 license = "ISC"
+edition = "2018"
 
 [dependencies]

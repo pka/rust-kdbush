@@ -72,7 +72,7 @@ impl KDBush {
             kdbush.ids.push(id);
         });
         let size = kdbush.points.len();
-        kdbush.sort_kd(0, size - 1, 0);
+        kdbush.sort_kd(0, size.saturating_sub(1), 0);
         kdbush
     }
 
@@ -99,7 +99,7 @@ impl KDBush {
     /// Build index
     pub fn build_index(&mut self) {
         let size = self.points.len();
-        self.sort_kd(0, size - 1, 0);
+        self.sort_kd(0, size.saturating_sub(1), 0);
     }
 
     /// Finds all items within the given bounding box
@@ -250,7 +250,7 @@ impl KDBush {
         } else {
             self.select(m, left, right, 1);
         }
-        self.sort_kd(left, m - 1, (axis + 1) % 2);
+        self.sort_kd(left, m.saturating_sub(1), (axis + 1) % 2);
         self.sort_kd(m + 1, right, (axis + 1) % 2);
     }
 
@@ -396,5 +396,10 @@ mod tests {
         let index = KDBush::create(points, DEFAULT_NODE_SIZE);
         index.range(20.0, 30.0, 50.0, 70.0, |id| print!("{} ", id));
         index.within(50.0, 50.0, 20.0, |id| print!("{} ", id));
+    }
+
+    #[test]
+    fn test_create_empty() {
+        KDBush::create(vec![], DEFAULT_NODE_SIZE);
     }
 }
